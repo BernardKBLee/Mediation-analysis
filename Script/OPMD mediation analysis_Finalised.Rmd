@@ -1,0 +1,78 @@
+---
+title: "OPMD mediation analysis"
+date: "2020-08-06"
+author: "Hui Shi Saw"
+output: html_notebook
+---
+
+#### Load library
+```{r}
+# Load library
+library(tidyverse)
+library(mediation)
+#library(gvlma)
+```
+#### Method 2: mediation package
+```{r}
+# Load data
+OPMD_data <- read.delim("~/OneDrive - Cancer Research Malaysia/Kuepeng/2021/New_targets/OPMD/Data/_Gene_Module22_Expression_edited_5samples.txt")
+
+# Extract all gene name
+geneName <- names(OPMD_data)[4:length(OPMD_data)]
+
+# Create a data frame to collect p-value associated with all genes
+# Change the names of the immune signature accordingly
+Th17 <- tibble(GeneName = geneName)
+head(Th17)
+
+# Create a vector to collect all p-value
+bucket <- vector(mode = "integer", length = nrow(Th17))
+
+```
+
+```{r}
+#Starts
+for (i in 4:length(OPMD_data)) {
+  # Change immune signature (M) accordingly
+  M <- OPMD_data$Th17
+  X <- OPMD_data[[i]]
+  Y <- OPMD_data$Binary
+  
+  fitM <- lm(M ~ X, OPMD_data)
+  fitY <- lm(Y ~ X + M, OPMD_data)
+  fitMedBoot <- mediate(fitM, fitY, boot=TRUE, treat="X", mediator="M")
+  bucket[i - 3] <- fitMedBoot$d0.p
+  print(i - 3)
+}
+
+# Put the p-value vector into the data frame
+Th17$pvalue <- bucket
+
+# Write the output
+write_csv(Th17, "~/OneDrive - Cancer Research Malaysia/Kuepeng/2021/New_targets/OPMD/Data/_Mediation_output/_Gene_Module18_mediation_output_5samples.csv")
+```
+
+#### Session info
+```{r}
+info <- sessionInfo()
+```
+####retrieve p value of a specific gene from bucket
+idx <-which(names(OPMD_data) == "AAK1")
+ bucket[idx-5]
+ 
+####to check the p value of a specific gene
+```{r}
+M <- OPMD_data$Th17
+X <- OPMD_data$ZNF324B
+Y <- OPMD_data$Binary
+
+fitM <- lm(M ~ X, OPMD_data) #IV on M; 
+fitY <- lm(Y ~ X + M, OPMD_data) #IV and M on DV; 
+fitMed <- mediate(fitM, fitY, treat="X", mediator="M")
+summary(fitMed)
+```
+
+```{r}
+info <- sessionInfo()
+```
+
